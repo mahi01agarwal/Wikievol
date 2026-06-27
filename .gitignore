@@ -19,3 +19,6 @@ id_ed25519
 server/data/
 # Local Claude preview helper
 .claude/
+
+wikievolution.db
+

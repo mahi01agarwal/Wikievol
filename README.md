@@ -41,6 +41,30 @@ pip install -r requirements.txt
 python app.py            # runs on http://localhost:5000
 ```
 
+
+if in case this doesnt works another way which worked for me is:
+
+```bash
+cd server
+
+rm -rf WikiEnv  
+uv python install 3.12
+uv venv -p 3.12 WikiEnv
+source WikiEnv/bin/activate
+
+# to verify   :
+# which python  
+# python --version
+# python -c "import sys; print(sys.executable)"
+
+uv pip install -r requirements.txt
+
+cp .env.example .env 
+# and fill the info in the .env 
+
+python app.py
+```
+
 Debug mode is **off by default**. For local development you can enable it with:
 
 ```bash

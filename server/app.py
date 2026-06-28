@@ -593,8 +593,6 @@ def get_csv_data_monthly_aggregated():
     JOIN WikiProject wp ON wp.project_id = ma.project_id
     WHERE wp.project_name = %s
     ORDER BY ma.month
-    c
-    
     """
     rows = query_all(sql, (project,))
     return json_records(rows)

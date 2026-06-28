@@ -392,7 +392,7 @@ from flask_cors import CORS
 import os
 import re
 from urllib.parse import quote
-
+import requests
 import pandas as pd
 import pymysql
 from pymysql.cursors import DictCursor
@@ -828,6 +828,69 @@ def download_csv_endpoint():
         mimetype="text/csv",
         headers={"Content-Disposition": "attachment; filename=selected_articles.csv"},
     )
+
+
+
+@app.route("/get_pagepile_id", methods=["POST"])
+def get_pagepile_id():
+    titles = request.get_json(silent=True) or []
+    if not isinstance(titles, list) or not titles:
+        return jsonify({"error": "Expected JSON list of titles"}), 400
+
+    lookup_titles = [t.replace(" ", "_").strip() for t in titles]
+
+    placeholders = ",".join(["%s"] * len(lookup_titles))
+    sql = f"SELECT page_title FROM Article WHERE page_title IN ({placeholders})"
+    rows = query_all(sql, tuple(lookup_titles))
+
+    if not rows:
+        return jsonify({"error": "No valid articles found in local database"}), 404
+
+    valid_titles = [r["page_title"].replace("_", " ").strip() for r in rows]
+    valid_titles = list(set([t for t in valid_titles if t]))
+    titles_payload = "\n".join(valid_titles)
+
+    # --- DEBUG LOGGING: Look in your terminal running Flask to see these! ---
+    print("\n--- PAGEPILE DEBUG START ---")
+    print(f"1. Number of valid titles found: {len(valid_titles)}")
+    print(f"2. Exact string payload being sent to Toolforge:\n{repr(titles_payload)}")
+    print("----------------------------\n")
+
+    try:
+        headers = {
+            "User-Agent": "WikiEvolution (https://wikievol.toolforge.org/)"
+        }
+        
+        pagepile_resp = requests.post(
+            "https://pagepile.toolforge.org/api.php",
+            headers={
+                "User-Agent": "WikiEvolution (https://wikievol.toolforge.org/)"
+            },
+            data={
+                "action": "create_pile_with_data",  # <-- Change this exact string!
+                "wiki": "enwiki",
+                "format": "json",
+                "data": titles_payload
+            },
+            timeout=15
+        )
+        
+        # --- DEBUG LOGGING: See exactly what Toolforge replies with ---
+        print(f"3. PagePile Raw Response Status: {pagepile_resp.status_code}")
+        print(f"4. PagePile Raw Response Text: {pagepile_resp.text}")
+        
+        pagepile_resp.raise_for_status()
+        pagepile_data = pagepile_resp.json()
+
+        if pagepile_data.get("status") == "OK":
+            pile_id = pagepile_data.get("pile", {}).get("id")
+            return jsonify({"pagepile_id": pile_id, "count": len(valid_titles)})
+        else:
+            return jsonify({"error": "PagePile backend rejected request layout", "details": pagepile_data}), 502
+
+    except requests.exceptions.RequestException as e:
+        return jsonify({"error": f"Failed to connect: {str(e)}"}), 502
+
 
 
 @app.route("/get_pageviews", methods=["GET"])

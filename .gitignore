@@ -16,7 +16,10 @@ id_ed25519
 **/dist
 
 # Per-project data cache generated at runtime by the Flask app
-server/data/
+server/wikievolution.db
+server/wikievolution.zip
+data/
+
 # Local Claude preview helper
 .claude/
 

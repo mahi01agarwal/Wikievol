@@ -164,6 +164,47 @@ const SelectedArticles = ({ selectedRows, project }) => {
         link.click();
     };
 
+
+
+    
+
+    // New download handler: request IDs from backend and build a .doc (plain-text)
+    const downloadPagepileID = () => {
+        const titles = Array.isArray(selectedRows) ? selectedRows.map(a => a.page_title) : [];
+        if (!titles.length) return;
+
+        axios.post('/get_pagepile_id', titles)
+            .then(resp => {
+                const { pagepile_id, count } = resp.data;
+                const docContent = `WikiEvolution Selected Articles - Pagepile Collection\n\n` +
+                                `Pagepile ID: ${pagepile_id}\n` +
+                                `Article Count: ${count}\n` +
+                                // Corrected URL syntax to view the raw collection data
+                                `View Collection: https://pagepile.toolforge.org/api.php?id=${pagepile_id}&action=get_data&format=json\n\n` +
+                                `Selected Articles:\n` +
+                                `${titles.join('\n')}`;
+
+
+                const blob = new Blob([docContent], { type: 'text/plain' });
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.setAttribute('download', 'selected_articles_pagepile.doc');
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                window.URL.revokeObjectURL(url);
+            })
+            .catch(err => {
+                console.error('Failed to create pagepile:', err);
+                alert('Error: Could not create pagepile collection.');
+            });
+    };
+
+
+
+
+
     const metrics = [
         { key: 'pred_qual', label: 'Predicted Quality' },
         { key: 'num_refs', label: 'Number of References' },
@@ -310,19 +351,15 @@ const SelectedArticles = ({ selectedRows, project }) => {
 //         </div>
 //     );
 
-
         return (
             <div className="selected-articles">
                 {selectedRows.length > 0 && (
                     <div>
-                        <button onClick={downloadCSV} className="btn btn-primary">
-                            Download CSV
-                        </button>
-                        <button onClick={downloadTitles} className="btn btn-secondary">
-                            Download Titles
+                        <button onClick={downloadPagepileID} className="btn btn-primary">
+                            Download Pagepile ID (doc)
                         </button>
                         <p style={{ marginTop: '10px', fontSize: '14px', color: '#666' }}>
-                            Selected articles shown above. Correlations visible in the heatmap.
+                            Creates a pagepile collection and downloads the ID for sharing.
                         </p>
                     </div>
                 )}
